@@ -1,1 +1,72 @@
 
+########################################################
+Step 1 - Download the FASTA sequences for all organisms in HOMD
+
+Go to: http://www.homd.org/ftp/genomes/PROKKA/current/
+
+download the file titled SEQID_info.csv and deposit it in the directory where sequences will be stored
+
+run the R script downloadSequences.r - code included below
+
+#######################################
+Step 1.5 - Download fasta files from refseq
+
+
+###################
+x <- read.csv('SEQID_info.csv',header=TRUE)
+
+files <- x[,1]
+
+bad <- which(is.na(files))
+
+if(length(bad) > 0){
+        files = files[-bad]
+}
+
+for(i in 1:length(files)){
+        path <- paste0('http://www.homd.org/ftp/genomes/PROKKA/current/faa/',files[i],'.faa')
+        call = paste('wget',path)
+        system(call)
+}
+##################
+
+Step 2 - Count Kmers
+
+run submitKmerJobs.r. This is a loop that calls the R script countKmers.r and provides as a line argument the target FASTA f$
+for which kmers should be counted.
+
+
+This code loads two libraries: tcR and Biostrings
+
+This code uses the function readBstringSet() from biostrings to open the fasta file provided as argument 1
+It then uses the function get.kmers() to count the kmers appearing in each ORF of the fasta file (default k = 5)
+The results are saved in a table and written to the directory
+
+For this step I put them all into a directory called COMPLETE_KMERS
+
+#######################################################
+Step 3 - count kmer frequency and populate vectors with GetKmerVector.r
+
+pre-populate a vector with every possible 5mer by calling makeKmerList.r
+This won't work in interactive mode, so submit it as a batch job with:
+
+Rscript submitKmerList.r
+
+Once this is done then we can populate a vector for each strain in our target directory using
+GetKmerVector.r. This script will open the kmer file for the sequence, identify the relevant indices of the vector, and fill$
+kmers. It will then write the vector to a csv as a column.
+
+The intention is that once the vector is written and we identify which elements we want to use in a statistical analysis we $
+and select the rows we wish to keep.
+
+It takes ~2.5 seconds for R to open up the kmerlist as a batch job and less to open the sequence files generated in step 2
+To save time submit several jobs that take chunks of sequence files as their inputs
+
+########################################################
+step 4 - count the prevalence of each kmer across all target sequences with cumulative.r
+
+submit it with submitCumulative.r
+
+This file will open up the vector for each target sequence and combine them into two
+1 - a cumulative count for each kmer
+2 - a count of prevalence (any kmer that occurs  > 0  times is increased by 1)
